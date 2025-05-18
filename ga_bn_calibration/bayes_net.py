@@ -219,7 +219,7 @@ def mixminmax(*args):
 # Step 2 – Mixing with the chosen function and conversion using TNormal
 # ================================
 
-def mix_and_transform_with_tnormal(estados_pais, pesos, repositorio, variance, func_comb):
+def mix_and_transform_with_tnormal(estados_pais, pesos, repository, variance, func_comb):
     #Validation
     if not estados_pais:
         raise KeyError("estados_pais is empty")
@@ -234,9 +234,9 @@ def mix_and_transform_with_tnormal(estados_pais, pesos, repositorio, variance, f
 
     amostras_por_pai = []
     for estado in estados_pais:
-        if estado not in repositorio:
-            raise KeyError(f"Estado {estado} not in repositorio")
-        samples = repositorio[estado]['amostras']
+        if estado not in repository:
+            raise KeyError(f"Estado {estado} not in repository")
+        samples = repository[estado]['amostras']
         if len(samples) < 10000:
             raise ValueError("less than 10 000 samples")
         #amostras_por_pai.append(np.random.choice(samples, size=10000, replace=False))
@@ -284,13 +284,13 @@ functions = {
     "WMAX": wmax,
     "MIXMINMAX": mixminmax
 }
-def carregar_amostras_json(caminho_arquivo='repositorio.json'):
+def carregar_amostras_json(caminho_arquivo='repository.json'):
     with open(caminho_arquivo, 'r', encoding='utf-8') as f:
-        repositorio = json.load(f)
+        repository = json.load(f)
         # Converte as listas de volta para arrays do NumPy
-        for estado in repositorio:
-            repositorio[estado]['amostras'] = np.array(repositorio[estado]['amostras'])
-        return repositorio
+        for estado in repository:
+            repository[estado]['amostras'] = np.array(repository[estado]['amostras'])
+        return repository
 
 # Exemplo de uso
-repositorio = carregar_amostras_json()
+repository = carregar_amostras_json()
