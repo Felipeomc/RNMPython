@@ -12,6 +12,7 @@ import json
 import ast
 import time
 
+
 from sklearn.metrics import mean_squared_error
 import itertools
 
@@ -39,8 +40,8 @@ class BNetwork:
         var_card = len(self.nodes[node_id]["outcomes"])
         cpt_values = np.array(cpt_values)
         if cpt_values.shape != (var_card, np.prod(parent_cards)):
-            raise ValueError(f"Format error for {node_id}. Espected {(var_card, np.prod(parent_cards))}, but received {cpt_values.shape}")
-        cpd = TabularCPD(
+            raise ValueError(f"Incorrect format for {node_id}. Expected {(var_card, np.prod(parent_cards))}, but received {cpt_values.s
+    cpd = TabularCPD(
             variable=node_id,
             variable_card=var_card,
             values=cpt_values.tolist(),
@@ -69,7 +70,7 @@ class BNetwork:
 
 
 # ================================
-# Begin of the Bayesian Network
+# Beginning of the Bayesian Network creation
 # ================================
 bn = BNetwork()
 
@@ -81,9 +82,10 @@ states = {
     'VH': {'lower': 0.8, 'upper': 1.0}
 }
 
-bn.createNode("AT", "Aptidão Técnica", list(states.keys()))
-bn.createNode("AC", "Aptidão Colaborativa", list(states.keys()))
-bn.createNode("AE", "Aptidão Equipe", list(states.keys()))
+bn.createNode("AT", "Technical Aptitude", list(states.keys()))
+bn.createNode("AC", "Collaborative Aptitude", list(states.keys()))
+bn.createNode("AE", "Team Aptitude", list(states.keys()))
+
 
 bn.addEdge("AT", "AE")
 bn.addEdge("AC", "AE")
@@ -91,6 +93,8 @@ bn.addEdge("AC", "AE")
 cpd_at = [[0.2], [0.2], [0.2], [0.2], [0.2]]
 cpd_ac = [[0.2], [0.2], [0.2], [0.2], [0.2]]
 
+
+#wmean:
 def wmean(*args):
     if len(args) % 2 != 0:
         raise ValueError("An even number of arguments (weight-value pairs) is required.")
@@ -110,8 +114,7 @@ def wmean(*args):
     return partial_sum_value / partial_sum_weight
 
 
-
-#nova:
+#wmin:
 def wmin(*args):
     if len(args) % 2 != 0:
         raise ValueError("An even number of arguments (weight-value pairs) is required.")
@@ -137,18 +140,7 @@ def wmin(*args):
 
     return current_min
 
-
-   
-    
-    
-    
-
-    
-
-
-
-
-#nova:
+#wmax:
 def wmax(*args):
     if len(args) % 2 != 0:
         return None
@@ -188,13 +180,9 @@ def wmax(*args):
             max_e = e_i
         else:
             max_e = np.maximum(max_e, e_i)
-
-
     return max_e
 
-
-
-#nova:
+#mixminmax:
 def mixminmax(*args):
     """
     Calculates:
@@ -224,19 +212,15 @@ def mixminmax(*args):
 
     return (weights[0] * mins + weights[1] * maxs) / sum(weights)
 
-
-
 # ============================================
 
 
 # ================================
-# Etapa 2 – Mistura com a funcao escolhida e conversão com TNormal
+# Step 2 – Mixing with the chosen function and conversion using TNormal
 # ================================
-import numpy as np
-from scipy.stats import truncnorm
 
-def misturar_e_transformar_com_tnormal(estados_pais, pesos, repositorio, variance, func_comb):
-    #Validações
+def mix_and_transform_with_tnormal(estados_pais, pesos, repositorio, variance, func_comb):
+    #Validation
     if not estados_pais:
         raise KeyError("estados_pais is empty")
 
@@ -294,155 +278,19 @@ def misturar_e_transformar_com_tnormal(estados_pais, pesos, repositorio, varianc
 
 
 
-# ================================
-# Etapa 3 – Construção da tabela TPN para AE (25 combinações)
-# ================================
-'''
-    
-ae_cpt = []
-
-for at in states:
-    for ac in states:
-        #Melhor configuração encontrada:
-        #Função: WMIN, Pesos: [0.56 0.44], Variância: 0.1, Brier Score: 0.0026242
-        probs = misturar_e_transformar_com_tnormal(
-            estados_pais=[at, ac],
-            pesos=[0.56, 0.44],
-            repositorio=repositorio,
-            variance=0.1,#min 0.0005 e max 1 escrever justificativa lógica
-            func_comb=wmin
-        )
-        ae_cpt.append(probs)
-        #print(f"(AT={at}, AC={ac}) → {probs}")
-
-ae_cpt = np.array(ae_cpt).T  # Transpor para [5 x 25]
-
-# ================================
-# Etapa 4 – Atribuir CPDs à rede
-# ================================
-bn.setNodeCPD("AT", cpd_at)
-bn.setNodeCPD("AC", cpd_ac)
-bn.setNodeCPD("AE", ae_cpt.tolist())
-
-expert_data = [
-    {"AT": "VL", "AC": "VH", "AE_expert": [0.274, 0.323, 0.274, 0.081, 0.048]},
-    {"AT": "VH", "AC": "VL", "AE_expert": [0.172, 0.259, 0.345, 0.172, 0.052]},
-    {"AT": "VL",  "AC": "VL",  "AE_expert": [0.333, 0.333, 0.283, 0.050, 0.0]},
-    {"AT": "VH",  "AC": "VH", "AE_expert": [0.0, 0.055, 0.273, 0.309, 0.364]},
-    {"AT": "VL",  "AC": "M", "AE_expert": [0.2, 0.3, 0.34, 0.1, 0.06]},
-    {"AT": "M",   "AC": "VL", "AE_expert": [0.357, 0.357, 0.179, 0.107, 0.0]},
-]
-
-
-
-
-
-
-# ================================
-# Geração da CPT já calibrada com a melhor configuração de função e variância
-# ================================
-
-# A CPT será construída usando os melhores parâmetros encontrados
-ae_cpt_calibrada = []
-
-for at in states:
-    for ac in states:
-        probs = misturar_e_transformar_com_tnormal(
-            at_estado=at,
-            ac_estado=ac,
-            repositorio=repositorio,
-            peso_at=melhor_config["peso_at"],
-            peso_ac=melhor_config["peso_ac"],
-            variance=melhor_config["variance"],  
-            func_comb=funcoes[melhor_config["funcao"]]
-        )
-        ae_cpt_calibrada.append(probs)
-        print(f"(AT={at}, AC={ac}) → {probs}")
-
-# Transpor a matriz para o formato [5 linhas × 25 colunas]
-ae_cpt_calibrada = np.array(ae_cpt_calibrada).T
-
-# Atribui a nova CPT ao nó AE
-bn.setNodeCPD("AE", ae_cpt_calibrada.tolist())
-print("\n✅ CPT calibrada atribuída ao nó AE com sucesso.")
-
-'''
-
-
 funcoes = {
     "WMEAN": wmean,
     "WMIN": wmin,
     "WMAX": wmax,
     "MIXMINMAX": mixminmax
 }
-with open('repositorio.pkl', 'rb') as f:
-        repositorio = pickle.load(f)
-# ======== Executar e salvar os 48 cenários ========
-if __name__ == "__main__":
-    with open('repositorio.pkl', 'rb') as f:
-        repositorio = pickle.load(f)
-    
-    
-    '''
-    # lê os cenários no csv
-    df = pd.read_csv("cenarios_estratificados_2_3_pais.csv")
+def carregar_amostras_json(caminho_arquivo='repositorio.json'):
+    with open(caminho_arquivo, 'r', encoding='utf-8') as f:
+        repositorio = json.load(f)
+        # Converte as listas de volta para arrays do NumPy
+        for estado in repositorio:
+            repositorio[estado]['amostras'] = np.array(repositorio[estado]['amostras'])
+        return repositorio
 
-    # Mapeamento das funções
-    func_map = {
-        'wmean': wmean,
-        'wmin': wmin,
-        'wmax': wmax,
-        'mixminmax': mixminmax
-    }
-
-    #repositorio = gerar_amostras_base_por_estado()
-    def carregar_amostras_json(caminho_arquivo='repositorio.json'):
-        with open(caminho_arquivo, 'r', encoding='utf-8') as f:
-            dados = json.load(f)
-            # converte as listas de volta para arrays NumPy
-            for estado in dados:
-                dados[estado]['amostras'] = np.array(dados[estado]['amostras'])
-            return dados
-
-    repositorio = carregar_amostras_json()
-    
-    linhas_csv = []
-
-    for _, c in df.iterrows():
-        estados_pais = [c["at"], c["ac"]]
-        
-        # Verifica dinamicamente se há um terceiro pai (hn)
-        if "hn" in c and pd.notna(c["hn"]):
-            estados_pais.append(c["hn"])
-            
-        # Converte a string de pesos e variância para lista e float
-        pesos = [float(p) for p in ast.literal_eval(c["pesos"])]
-        variance_raw = ast.literal_eval(str(c["variance"]))
-        if isinstance(variance_raw, list):
-            variance = float(variance_raw[0])
-        else:
-            variance = float(variance_raw)
-        func = func_map[c["funcao"].lower()]
-
-        probs = misturar_e_transformar_com_tnormal(estados_pais, pesos, repositorio, variance, func)
-
-        linha = {
-            "id": c["id"],
-            "funcao": c["funcao"],
-            "estados": "-".join(estados_pais),
-            "pesos": "-".join(map(str, pesos)),
-            "variance": variance,
-            "prob_VL": probs[0],
-            "prob_L": probs[1],
-            "prob_M": probs[2],
-            "prob_H": probs[3],
-            "prob_VH": probs[4],
-        }
-
-        linhas_csv.append(linha)
-
-    # Salvar no CSV
-    df_resultado = pd.DataFrame(linhas_csv)
-    df_resultado.to_csv("resultados_modelo_60cenarios.csv", index=False, encoding="utf-8")
-    print("Resultados salvos em resultados_modelo_60cenarios.csv")
-    '''
+# Exemplo de uso
+repositorio = carregar_amostras_json()
