@@ -1,4 +1,4 @@
-from bn_as_fitness_v2 import misturar_e_transformar_com_tnormal, repositorio, funcoes
+from bn_as_fitness_v2 import misturar_e_transformar_com_tnormal, repository, functions
 
 import random       
 import numpy as np
@@ -26,21 +26,21 @@ variancias = [0.0005, 0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 5]
 # Representação do Indivíduo
 class Individuo:
     def __init__(self, n_pais):
-        self.funcao = random.choice(list(funcoes.keys()))
+        self.funcao = random.choice(list(functions.keys()))
         self.pesos = gerar_pesos(n_pais)
         self.variancia = random.choice(variancias)
         self.fitness = None
 
-    def avaliar(self, repositorio):
+    def avaliar(self, repository):
         erros = []
         #print(f"\n[Indivíduo] Função: {self.funcao} | Pesos: {self.pesos} | Variância: {self.variancia}")
    
         for c in expert_data:
             estados_pais = [c["AT"], c["AC"]]
             probs_model = misturar_e_transformar_com_tnormal(
-                estados_pais, self.pesos, repositorio,
+                estados_pais, self.pesos, repository,
                 variance=self.variancia,
-                func_comb=funcoes[self.funcao]
+                func_comb=functions[self.funcao]
             )
             #print(f"  AT={estados_pais[0]}, AC={estados_pais[1]} → Probs: {probs_model}")
             erro = mean_squared_error(c["AE_expert"], probs_model)
@@ -69,7 +69,7 @@ def crossover(pai1, pai2):
 # Mutação
 def mutacao(ind, taxa_mutacao):
     if random.random() < taxa_mutacao:
-        ind.funcao = random.choice(list(funcoes.keys()))
+        ind.funcao = random.choice(list(functions.keys()))
     if random.random() < taxa_mutacao:
         ind.pesos = gerar_pesos(len(ind.pesos))
     if random.random() < taxa_mutacao:
@@ -77,10 +77,10 @@ def mutacao(ind, taxa_mutacao):
     return ind
 
 # Algoritmo Genético Principal
-def algoritmo_genetico(tam_pop, n_pais, max_gen, taxa_mutacao, repositorio, funcoes):
+def algoritmo_genetico(tam_pop, n_pais, max_gen, taxa_mutacao, repository, functions):
     populacao = inicializar_populacao(tam_pop, n_pais)
     for ind in populacao:
-        ind.avaliar(repositorio)
+        ind.avaliar(repository)
 
     for geracao in range(max_gen):
         nova_populacao = []
@@ -97,7 +97,7 @@ def algoritmo_genetico(tam_pop, n_pais, max_gen, taxa_mutacao, repositorio, func
                 filho = selecao_torneio(populacao)  # Replicação direta de um pai
             
             filho = mutacao(filho, taxa_mutacao)
-            filho.avaliar(repositorio)
+            filho.avaliar(repository)
             nova_populacao.append(filho)
 
         populacao = nova_populacao
@@ -113,7 +113,7 @@ def algoritmo_genetico(tam_pop, n_pais, max_gen, taxa_mutacao, repositorio, func
 
 # Exemplo de Execução
 inicio = time.time()
-melhor_ind = algoritmo_genetico(tam_pop=50, n_pais=2, max_gen=10, taxa_mutacao=0.1, repositorio=repositorio, funcoes=funcoes)
+melhor_ind = algoritmo_genetico(tam_pop=50, n_pais=2, max_gen=10, taxa_mutacao=0.1, repository=repository, functions=functions)
 print(melhor_ind)
 fim = time.time()
 
