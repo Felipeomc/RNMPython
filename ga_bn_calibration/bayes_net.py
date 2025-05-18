@@ -278,7 +278,7 @@ def mix_and_transform_with_tnormal(estados_pais, pesos, repositorio, variance, f
 
 
 
-funcoes = {
+functions = {
     "WMEAN": wmean,
     "WMIN": wmin,
     "WMAX": wmax,
